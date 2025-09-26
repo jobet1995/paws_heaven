@@ -1,6 +1,7 @@
 name: Animal Shelter Foundation CI/CD
 
 on:
+  # Trigger on pushes to specific branches and pull requests
   push:
     branches:
       - develop    # Developer environment
@@ -8,10 +9,10 @@ on:
       - staging    # ST environment
       - sit        # SIT environment
       - main       # Production environment
-      - '**'       # Any other branch
   pull_request:
-    branches: [develop, qa, staging, sit, main, '**']
-  create:         # Trigger when a new branch or tag is created
+    branches: [develop, qa, staging, sit, main]
+  # Trigger on branch/tag creation
+  create:
 # Environment configurations
 env:
   DOCKER_IMAGE: animal_shelter_foundation
@@ -30,18 +31,59 @@ defaults:
     working-directory: .
 
 jobs:
-  # Branch check - runs on any branch including new ones
+  # Branch check - runs on new branch creation
   branch-check:
     name: Branch Check
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'create' || 
-      (github.event_name == 'push' && !contains(github.ref, 'refs/heads/develop') && !contains(github.ref, 'refs/heads/qa') && !contains(github.ref, 'refs/heads/staging') && !contains(github.ref, 'refs/heads/sit') && !contains(github.ref, 'refs/heads/main'))
+      github.event_name == 'create' ||
+      (github.event_name == 'push' &&
+        !contains(github.ref, 'refs/heads/develop') &&
+        !contains(github.ref, 'refs/heads/qa') &&
+        !contains(github.ref, 'refs/heads/staging') &&
+        !contains(github.ref, 'refs/heads/sit') &&
+        !contains(github.ref, 'refs/heads/main'))
     
     steps:
+    - name: Extract branch name
+      id: extract_branch
+      shell: bash
+      run: |
+        # Extract branch name from ref
+        echo "BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')" >> $GITHUB_OUTPUT
+        echo "Branch name: ${{ steps.extract_branch.outputs.BRANCH_NAME }}"
+    
+    - name: Validate branch name
+      id: validate_branch
+      shell: bash
+      run: |
+        # Branch naming pattern: feature/ABC-123-description or bugfix/ABC-456-fix-issue
+        if ! echo "${{ steps.extract_branch.outputs.BRANCH_NAME }}" | grep -qE '^(feature|bugfix|hotfix|release|chore)/[A-Z]+-[0-9]+-.*$'; then
+          echo "::error::Branch name does not follow the required pattern: type/ABC-123-description"
+          echo "::error::Allowed types: feature, bugfix, hotfix, release, chore"
+          echo "::error::Example: feature/ABC-123-add-user-authentication"
+          exit 1
+        fi
+        
+        # Check if branch name is too long
+        if [ ${#{{ steps.extract_branch.outputs.BRANCH_NAME }}} -gt 50 ]; then
+          echo "::error::Branch name is too long. Maximum 50 characters allowed."
+          exit 1
+        fi
+    
     - name: Checkout code
       uses: actions/checkout@v4
-      
+      with:
+        fetch-depth: 0  # Fetch all history for branch comparison
+    
+    - name: Check for merge conflicts
+      run: |
+        git fetch origin main
+        if ! git merge-base --is-ancestor main ${{ steps.extract_branch.outputs.BRANCH_NAME }}; then
+          echo "::error::Branch is not up to date with main. Please rebase your branch."
+          exit 1
+        fi
+    
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
