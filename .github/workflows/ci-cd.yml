@@ -52,11 +52,19 @@ jobs:
         DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
         DJANGO_DEBUG: 'False'
 
+    - name: Install pytest-django
+      run: pip install pytest-django
+
     - name: Run pytest
       if: steps.check_tests.outputs.tests_found == 'true'
       run: |
-        # Run pytest with verbose output
-        if ! pytest -v; then
+        # Set Django settings module for pytest
+        export DJANGO_SETTINGS_MODULE=${{ env.DJANGO_SETTINGS_MODULE }}
+        export DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+        export DJANGO_DEBUG=False
+        
+        # Run pytest with verbose output and Django test settings
+        if ! python -m pytest -v --ds=paws_heaven.settings; then
           # If pytest fails, check if it's because no tests were found
           if [ $? -eq 5 ]; then
             echo "::notice::No tests found by pytest, but this is not a failure"
