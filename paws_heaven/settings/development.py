@@ -30,9 +30,7 @@ DATABASES = {
     }
 }
 
-# Debug toolbar
-INSTALLED_APPS += ['debug_toolbar']
-MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+# Development specific settings
 INTERNAL_IPS = ['127.0.0.1']
 
 # Email settings
