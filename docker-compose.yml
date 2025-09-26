@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: animal_shelter_web
+    restart: always
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    expose:
+      - "8000"
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             python manage.py migrate --noinput &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000"
+    networks:
+      - app_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: animal_shelter_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - web
+    networks:
+      - app_network
+
+volumes:
+  # Named volumes for persistence
+  static_volume:
+  media_volume:
+  db_data:
+  
+  # Bind mounts for development (commented out by default)
+  # - ./static_volume:/app/staticfiles
+  # - ./media_volume:/app/media
+
+networks:
+  app_network:
+    driver: bridge
