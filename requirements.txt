@@ -1,26 +1,15 @@
-# Core Django
+# Core
 Django>=5.0.0,<5.1.0
 
-# WSGI Server
-gunicorn>=21.2.0,<22.0.0
-
 # Database
-psycopg2-binary>=2.9.9,<3.0.0  # If using PostgreSQL
+psycopg2-binary>=2.9.9,<3.0.0
+
+# Environment
+python-dotenv>=1.0.0,<2.0.0
 
 # Production
-whitenoise>=6.6.0,<7.0.0  # For serving static files
-python-dotenv>=1.0.0,<2.0.0  # For environment variables
-
-# Security
-dj-database-url>=2.1.0,<3.0.0  # For database URL configuration
-django-environ>=0.11.2,<0.12.0  # Alternative to python-dotenv for Django
-
-# Performance
-django-compressor>=4.4.0,<5.0.0  # For static files optimization
-
-# Monitoring
-sentry-sdk>=1.40.0,<2.0.0  # Error tracking
+whitenoise>=6.6.0,<7.0.0
+gunicorn>=21.2.0,<22.0.0
 
 # Utilities
-Pillow>=10.0.0,<11.0.0  # For image processing
-python-slugify>=8.0.0,<9.0.0  # For URL-friendly slugs
+Pillow>=10.0.0,<11.0.0
