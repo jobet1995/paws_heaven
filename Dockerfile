@@ -44,9 +44,6 @@ COPY --from=builder /app/requirements.txt .
 # Copy project files
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
 # Expose the port the app runs on
 EXPOSE 8000
 
@@ -55,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health/ || exit 1
 
 # Command to run the application
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "paws_heaven.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
