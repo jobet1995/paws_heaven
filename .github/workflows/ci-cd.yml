@@ -54,7 +54,17 @@ jobs:
 
     - name: Run pytest
       if: steps.check_tests.outputs.tests_found == 'true'
-      run: pytest -v
+      run: |
+        # Run pytest with verbose output
+        if ! pytest -v; then
+          # If pytest fails, check if it's because no tests were found
+          if [ $? -eq 5 ]; then
+            echo "::notice::No tests found by pytest, but this is not a failure"
+            exit 0
+          else
+            exit 1
+          fi
+        fi
 
     - name: Lint with flake8
       run: |
