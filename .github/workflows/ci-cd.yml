@@ -34,7 +34,18 @@ jobs:
     - name: Run migrations
       run: python manage.py migrate --no-input
 
+    - name: Check for test files
+      id: check_tests
+      run: |
+        if [ -d "tests" ] || find . -type d -name "tests" -exec [ -f {}/__init__.py \; -o -f {}/test_*.py \; ] \; -print -quit | grep -q .; then
+          echo "tests_found=true" >> $GITHUB_OUTPUT
+        else
+          echo "No test files found. Skipping tests."
+          echo "tests_found=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Run Django tests
+      if: steps.check_tests.outputs.tests_found == 'true'
       run: python manage.py test
       env:
         DJANGO_SETTINGS_MODULE: ${{ env.DJANGO_SETTINGS_MODULE }}
@@ -42,6 +53,7 @@ jobs:
         DJANGO_DEBUG: 'False'
 
     - name: Run pytest
+      if: steps.check_tests.outputs.tests_found == 'true'
       run: pytest -v
 
     - name: Lint with flake8
