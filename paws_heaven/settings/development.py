@@ -32,11 +32,11 @@ INTERNAL_IPS = ['127.0.0.1', '10.0.2.2'] + [ip[: ip.rfind(".")] + ".1" for ip in
 # Allow all hosts in development
 ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', '127.0.0.1']
 
-# Database
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
