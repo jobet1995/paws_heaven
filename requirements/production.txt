@@ -1,0 +1,33 @@
+# Production requirements
+-r base.txt
+
+# Production WSGI server
+gunicorn>=21.2.0
+
+# Production database
+psycopg2-binary>=2.9.9
+
+# Production static files
+whitenoise>=6.6.0
+
+# Production monitoring
+sentry-sdk[django]>=1.39.1
+
+# Production caching
+redis>=5.0.0
+hiredis>=2.2.3
+
+# Production security
+django-csp>=3.7
+
+# Production email
+sendgrid>=6.11.0
+
+# Production logging
+python-json-logger>=2.0.7
+
+# Production performance
+django-redis>=5.4.0
+
+# Production security headers
+django-secure>=2.0.0
