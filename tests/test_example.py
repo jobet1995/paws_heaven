@@ -1,17 +1,17 @@
-import pytest
 from django.test import TestCase, Client
+
 
 class TestExample(TestCase):
     """Example test cases for the application."""
-    
+
     def setUp(self):
         """Set up test client."""
         self.client = Client()
-    
+
     def test_example(self):
         """Example test that should always pass."""
         assert 1 + 1 == 2
-    
+
     def test_homepage_status(self):
         """Test that homepage returns a valid status code."""
         response = self.client.get('/')
