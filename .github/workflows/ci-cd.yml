@@ -37,20 +37,9 @@ jobs:
       run: |
         mkdir -p static
         
-    - name: Set up test environment
-      run: |
-        echo "DJANGO_SECRET_KEY=test-key-1234567890-1234567890-1234567890-1234567890" >> $GITHUB_ENV
-        echo "DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1" >> $GITHUB_ENV
-        
     - name: Run tests
       env:
         DJANGO_SETTINGS_MODULE: paws_heaven.settings.testing
-        DJANGO_SECRET_KEY: ${{ env.DJANGO_SECRET_KEY || 'test-key-1234567890-1234567890-1234567890-1234567890' }}
-        DJANGO_ALLOWED_HOSTS: ${{ env.DJANGO_ALLOWED_HOSTS || 'localhost,127.0.0.1' }}
-        SECURE_HSTS_SECONDS: 0  # Disable HSTS for testing
-        SECURE_SSL_REDIRECT: 'False'
-        SESSION_COOKIE_SECURE: 'False'
-        CSRF_COOKIE_SECURE: 'False'
       run: |
         python manage.py check --deploy
         python manage.py test --noinput
