@@ -1,9 +1,22 @@
-from .base import *
+"""
+Settings for paws_heaven
+"""
 
-# Import the appropriate settings based on the environment
 import os
 
+from .base import (
+    INSTALLED_APPS, MIDDLEWARE, ROOT_URLCONF, TEMPLATES, WSGI_APPLICATION,
+    AUTH_PASSWORD_VALIDATORS, LANGUAGE_CODE, TIME_ZONE, USE_I18N, USE_TZ,
+    STATIC_URL, STATIC_ROOT, STATICFILES_DIRS, MEDIA_URL, MEDIA_ROOT,
+    DEFAULT_AUTO_FIELD, SECURE_SSL_REDIRECT, SECURE_PROXY_SSL_HEADER,
+    SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS, SECURE_HSTS_PRELOAD,
+    SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE, SECURE_CONTENT_TYPE_NOSNIFF,
+    SECURE_BROWSER_XSS_FILTER, X_FRAME_OPTIONS, SECURE_REFERRER_POLICY,
+    SESSION_COOKIE_HTTPONLY, CSRF_COOKIE_HTTPONLY, BASE_DIR
+)
+
+# Import the appropriate settings based on the environment
 if os.environ.get('DJANGO_ENV') == 'production':
-    from .production import *
-else:
-    from .development import *
+    from .production import *  # noqa: F403
+elif os.environ.get('DJANGO_ENV') == 'development':
+    from .development import *  # noqa: F403
