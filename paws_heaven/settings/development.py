@@ -1,8 +1,18 @@
 """
 Development settings for Paws Heaven project.
 """
-from .base import *
+import os
 import socket
+from pathlib import Path
+
+from .base import (
+    ALLOWED_HOSTS, AUTH_PASSWORD_VALIDATORS, BASE_DIR, CSRF_COOKIE_SECURE,
+    DATABASES, DEBUG, DEFAULT_AUTO_FIELD, INSTALLED_APPS, LANGUAGE_CODE,
+    MIDDLEWARE, ROOT_URLCONF, SECRET_KEY, SECURE_HSTS_SECONDS,
+    SECURE_SSL_REDIRECT, SESSION_COOKIE_SECURE, STATICFILES_DIRS, STATIC_ROOT,
+    STATIC_URL, TEMPLATES, TIME_ZONE, USE_I18N, USE_TZ, WSGI_APPLICATION,
+    MEDIA_URL, MEDIA_ROOT
+)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-dev-key-only'
