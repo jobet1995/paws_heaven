@@ -33,6 +33,10 @@ jobs:
     - name: Run migrations
       run: python manage.py check --deploy --fail-level WARNING
     
+    - name: Create static directory
+      run: |
+        mkdir -p static
+        
     - name: Run tests
       env:
         DJANGO_SETTINGS_MODULE: config.settings.testing
