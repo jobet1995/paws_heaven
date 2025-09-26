@@ -270,9 +270,11 @@ jobs:
   deploy:
     name: Deploy to ${{ matrix.env.name }}
     needs: docker-push
-    if: github.event_name == 'push'  # Only run on push events
     
-    # Define the deployment matrix
+    # Only run on push events
+    if: github.event_name == 'push'
+    
+    # Define the deployment matrix with branch filtering
     strategy:
       matrix:
         include:
@@ -280,26 +282,29 @@ jobs:
             env: 
               name: 'developer'
               host: 'dev.animalshelter.com'
+            # Only include this matrix entry if we're on the develop branch
+            if: ${{ github.ref == 'refs/heads/develop' }}
           - branch: 'qa'
             env: 
               name: 'qa'
               host: 'qa.animalshelter.com'
+            if: ${{ github.ref == 'refs/heads/qa' }}
           - branch: 'staging'
             env: 
               name: 'staging'
               host: 'staging.animalshelter.com'
+            if: ${{ github.ref == 'refs/heads/staging' }}
           - branch: 'sit'
             env: 
               name: 'sit'
               host: 'sit.animalshelter.com'
+            if: ${{ github.ref == 'refs/heads/sit' }}
           - branch: 'main'
             env: 
               name: 'production'
               host: 'animalshelter.com'
+            if: ${{ github.ref == 'refs/heads/main' }}
       fail-fast: false
-    
-    # Only run the deployment if the branch matches the matrix branch
-    if: github.ref == format('refs/heads/{0}', matrix.branch)
     
     runs-on: ubuntu-latest
     
