@@ -41,12 +41,54 @@ DATABASES = {
 DATABASES['default']['ATOMIC_REQUESTS'] = True  # Wrap each HTTP request in a transaction
 DATABASES['default']['CONN_MAX_AGE'] = 600  # Reuse database connections for up to 10 minutes
 
-# Security settings - these should be set in your environment variables
-# and will be loaded via base.py
+# Security settings
+# HSTS Settings - Enable only if you're sure
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
-# Additional security settings
+# SSL/HTTPS settings
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Session settings
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# CSRF settings
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_TRUSTED_ORIGINS = [
+    'https://animalshelter.com',
+    'https://www.animalshelter.com',
+    'https://staging.animalshelter.com',
+    'https://dev.animalshelter.com',
+    'https://qa.animalshelter.com',
+    'https://sit.animalshelter.com',
+]
+
+# Referrer Policy
 SECURE_REFERRER_POLICY = 'same-origin'
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+
+# Content Security
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+
+# Static files configuration
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Ensure the static and media directories exist
+os.makedirs(STATIC_ROOT, exist_ok=True)
+os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 # Session settings
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds

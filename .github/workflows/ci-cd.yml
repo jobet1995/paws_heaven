@@ -12,9 +12,6 @@ on:
   pull_request:
     branches: [develop, qa, staging, sit, main, '**']
   create:         # Trigger when a new branch or tag is created
-    branches: ['**']
-    tags: ['**']
-
 # Environment configurations
 env:
   DOCKER_IMAGE: animal_shelter_foundation
@@ -64,6 +61,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install flake8 pytest pytest-django
+    
+    - name: Create static directory
+      run: |
+        mkdir -p static
+        touch static/.gitkeep  # Ensure the directory is not empty
     
     - name: Run database migrations
       run: python manage.py check --deploy --fail-level WARNING
@@ -124,7 +126,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install flake8 pytest pytest-django
-    
+
     - name: Run database migrations
       run: python manage.py migrate --noinput
       env:
