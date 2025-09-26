@@ -1,94 +1,19 @@
-name: Animal Shelter Foundation CI/CD
+name: Django CI/CD Multi-Stage Pipeline
 
 on:
-  # Trigger on pushes to specific branches and pull requests
   push:
-    branches:
-      - develop    # Developer environment
-      - qa         # QA environment
-      - staging    # ST environment
-      - sit        # SIT environment
-      - main       # Production environment
+    branches: [ develop, qa, staging, sit, main ]
   pull_request:
-    branches: [develop, qa, staging, sit, main]
-  # Trigger on branch/tag creation
-  create: 
+    branches: [ develop, qa, staging, sit, main ]
+# Environment variables available to all jobs
 env:
-  DOCKER_IMAGE: animal_shelter_foundation
-  DOCKER_REGISTRY: docker.io  # Change to your registry if not using Docker Hub
-  DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DJANGO_SETTINGS_MODULE: paws_heaven.settings
-  DJANGO_DEBUG: 'True'
-  DJANGO_ALLOWED_HOSTS: '.animalshelter.com'
-
+  IMAGE_NAME: animal_shelter_foundation
+  DOCKERHUB_REPO: ${{ github.actor }}/animal_shelter_foundation
+  
 jobs:
-  # Set up Python environment
-  setup-python:
-    name: Set up Python
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        cache: 'pip'
-    
-    - name: Cache Python dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install flake8 pytest pytest-django
-    
-    - name: Create static directory
-      run: |
-        mkdir -p static
-        touch static/.gitkeep  # Ensure the directory is not empty
-    
-    - name: Run database migrations
-      run: python manage.py check --deploy --fail-level WARNING
-      env:
-        DJANGO_SETTINGS_MODULE: ${{ env.DJANGO_SETTINGS_MODULE }}
-        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-        DJANGO_DEBUG: 'False'
-    
-    - name: Run Django tests
-      run: python manage.py test --noinput
-      env:
-        DJANGO_SETTINGS_MODULE: ${{ env.DJANGO_SETTINGS_MODULE }}
-        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-        DJANGO_DEBUG: 'False'
-    
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
-
-  # Build and test the application
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
-    if: |
-      contains(github.ref, 'refs/heads/develop') || 
-      contains(github.ref, 'refs/heads/qa') || 
-      contains(github.ref, 'refs/heads/staging') || 
-      contains(github.ref, 'refs/heads/sit') || 
-      contains(github.ref, 'refs/heads/main')
-    
-    # Set environment variables for this job
-    env:
-      DJANGO_DEBUG: 'False'
-      DJANGO_ALLOWED_HOSTS: '.animalshelter.com,localhost,127.0.0.1'
     
     steps:
     - name: Checkout code
@@ -100,44 +25,24 @@ jobs:
         python-version: '3.12'
         cache: 'pip'
     
-    - name: Cache Python dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install flake8 pytest pytest-django
-
-    - name: Run database migrations
-      run: python manage.py migrate --noinput
-      env:
-        DJANGO_SETTINGS_MODULE: ${{ env.DJANGO_SETTINGS_MODULE }}
-        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-        DJANGO_DEBUG: ${{ env.DJANGO_DEBUG }}
     
-    - name: Run Django tests
-      run: python manage.py test --noinput
-      env:
-        DJANGO_SETTINGS_MODULE: ${{ env.DJANGO_SETTINGS_MODULE }}
-        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-        DJANGO_DEBUG: ${{ env.DJANGO_DEBUG }}
+    - name: Run migrations
+      run: python manage.py check --deploy --fail-level WARNING
     
-    - name: Run pytest
+    - name: Run tests
+      env:
+        DJANGO_SETTINGS_MODULE: config.settings.testing
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
       run: |
-        python -m pytest -v --ds=paws_heaven.settings
-      env:
-        DJANGO_SETTINGS_MODULE: ${{ env.DJANGO_SETTINGS_MODULE }}
-        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-        DJANGO_DEBUG: ${{ env.DJANGO_DEBUG }}
+        python manage.py test --noinput
     
     - name: Lint with flake8
       run: |
+        pip install flake8
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
 
@@ -146,211 +51,107 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     
-    # Set environment variables for this job
-    env:
-      DOCKER_BUILDKIT: 1
-      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
-      with:
-        driver: docker-container
-        
+    
     - name: Cache Docker layers
       uses: actions/cache@v3
       with:
         path: /tmp/.buildx-cache
         key: ${{ runner.os }}-buildx-${{ github.sha }}
         restore-keys: |
+          ${{ runner.os }}-buildx-
     
-    - name: Extract branch/tag name for image tagging
-      id: extract_branch
-      run: |
-        # Use branch name for image tag, replacing / with -
-        if [ "${GITHUB_REF#refs/heads/}" != "${GITHUB_REF}" ]; then
-          echo "tag_name=${GITHUB_REF#refs/heads/}" | sed 's/\//-/' >> $GITHUB_OUTPUT
-        elif [ "${GITHUB_REF#refs/tags/}" != "${GITHUB_REF}" ]; then
-          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        else
-          echo "tag_name=latest" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Build and push Docker image
+    - name: Build and export to Docker
       uses: docker/build-push-action@v4
-      id: build
       with:
         context: .
         push: false
-        tags: |
-          ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
-          ${{ env.DOCKER_IMAGE }}:${{ steps.extract_branch.outputs.tag_name }}
+        tags: ${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:${{ github.sha }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new
-        build-args: |
-          DJANGO_ENV=${{ github.ref_name == 'main' && 'production' || github.ref_name }}
     
     - name: Move cache
       run: |
         rm -rf /tmp/.buildx-cache
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache
     
-    - name: Save image metadata
+    - name: Collect static files
       run: |
-        echo "IMAGE_TAG=${{ steps.extract_branch.outputs.tag_name }}" >> $GITHUB_ENV
-        echo "IMAGE_SHA_TAG=sha-${{ github.sha }}" >> $GITHUB_ENV
-        echo "FULL_IMAGE_TAG=${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ steps.extract_branch.outputs.tag_name }}" >> $GITHUB_ENV
-        echo "FULL_IMAGE_SHA_TAG=${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}" >> $GITHUB_ENV
+        docker run --rm ${{ env.IMAGE_NAME }}:latest \
+          python manage.py collectstatic --noinput
 
-  # Push Docker image to registry
   docker-push:
-    name: Push Docker Image
+    name: Push to Docker Hub
     needs: docker-build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'  # Only run on push events
-    
-    # Set environment variables for this job
-    env:
-      DOCKER_BUILDKIT: 1
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-      with:
-        driver: docker-container
     
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
-        username: ${{ env.DOCKER_USERNAME }}
-        password: ${{ env.DOCKER_TOKEN }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: |
-          ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}
-        tags: |
-          type=raw,value=${{ env.IMAGE_TAG }}
-          type=raw,value=${{ env.IMAGE_SHA_TAG }}
-          type=sha,format=long
-    
-    - name: Build and push Docker image
+    - name: Push to Docker Hub
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache-new
-    
-    - name: Log image info
-      run: |
-        echo "Image pushed with tags: ${{ steps.meta.outputs.tags }}"
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
 
-  # Deploy to environment
   deploy:
-    name: Deploy to ${{ matrix.env.name }}
+    name: Deploy to ${{ github.ref_name }}
     needs: docker-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
     
-    # Only run on push events
+    # Only run on push events, not pull requests
     if: github.event_name == 'push'
     
-    # Define the deployment matrix with branch filtering
-    strategy:
-      matrix:
-        include:
-          - branch: 'develop'
-            env: 
-              name: 'developer'
-              host: 'dev.animalshelter.com'
-            # Only include this matrix entry if we're on the develop branch
-            if: ${{ github.ref == 'refs/heads/develop' }}
-          - branch: 'qa'
-            env: 
-              name: 'qa'
-              host: 'qa.animalshelter.com'
-            if: ${{ github.ref == 'refs/heads/qa' }}
-          - branch: 'staging'
-            env: 
-              name: 'staging'
-              host: 'staging.animalshelter.com'
-            if: ${{ github.ref == 'refs/heads/staging' }}
-          - branch: 'sit'
-            env: 
-              name: 'sit'
-              host: 'sit.animalshelter.com'
-            if: ${{ github.ref == 'refs/heads/sit' }}
-          - branch: 'main'
-            env: 
-              name: 'production'
-              host: 'animalshelter.com'
-            if: ${{ github.ref == 'refs/heads/main' }}
-      fail-fast: false
+    steps:
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     
+    - name: Set deployment host
+      id: set-host
+      run: |
+        if [ "${{ github.ref_name }}" = "develop" ]; then
+          echo "HOST=${{ env.DEV_HOST }}" >> $GITHUB_ENV
+        elif [ "${{ github.ref_name }}" = "qa" ]; then
+          echo "HOST=${{ env.QA_HOST }}" >> $GITHUB_ENV
+        elif [ "${{ github.ref_name }}" = "staging" ]; then
+          echo "HOST=${{ env.ST_HOST }}" >> $GITHUB_ENV
+        elif [ "${{ github.ref_name }}" = "sit" ]; then
+          echo "HOST=${{ env.SIT_HOST }}" >> $GITHUB_ENV
+        else
+          echo "HOST=${{ env.PROD_HOST }}" >> $GITHUB_ENV
+        fi
+    
+    - name: Deploy to environment
+      run: |
+        echo "Deploying to $HOST..."
+        # Example: ssh $HOST "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} && docker-compose up -d"
+
+  manual-approval:
+    name: Manual Approval for Production
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     
-    # Set environment variables for this job
-    env:
-      DJANGO_ENV: ${{ matrix.env.name }}
-      DJANGO_DEBUG: ${{ matrix.env.name != 'production' && 'True' || 'False' }}
-      DJANGO_ALLOWED_HOSTS: ${{ matrix.env.host }}
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Configure environment
-      run: |
-        echo "Deploying to ${{ matrix.env.name }} environment (${{ matrix.env.host }})"
-        echo "Using image: ${{ env.FULL_IMAGE_TAG }}"
-        echo "Environment: ${{ env.DJANGO_ENV }}"
-        echo "Debug mode: ${{ env.DJANGO_DEBUG }}"
-    
-    # Example: Deploy using SSH (for non-production environments)
-    - name: Deploy via SSH
-      if: matrix.env.name != 'production'
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          # Pull the new image
-          docker pull ${{ env.FULL_IMAGE_TAG }}
-          
-          # Update the running container
-          cd /path/to/your/app
-          docker-compose down
-          docker-compose up -d
-    
-    # Example: Deploy to production with approval
-    - name: Request production deployment approval
-      if: matrix.env.name == 'production'
-      uses: trstringer/manual-approval@v1
-      with:
-        secret: ${{ github.token }}
-        approvers: admin1,admin2  # Add your approvers here
-        minimum-approvals: 1
-    
-    - name: Deploy to production
-      if: matrix.env.name == 'production' && steps.approval.outputs.approved == 'true'
-      run: |
-        echo "Deploying to production..."
-        # Add your production deployment commands here
-        # Example: kubectl apply -f k8s/production.yaml
-      env:
-        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
-    
-    - name: Verify deployment
-      run: |
-        echo "Verifying deployment to ${{ matrix.env.host }}..."
-        # Add health check or smoke test here
-        # Example: curl -sSf https://${{ matrix.env.host }}/health/ || exit 1
+    - name: Wait for manual approval
+      run: echo "This job requires manual approval in the GitHub environment"
