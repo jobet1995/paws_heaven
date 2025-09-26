@@ -9,18 +9,42 @@ from decouple import config
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('DJANGO_SECRET_KEY')
 
+# Ensure the secret key is strong enough
+if len(SECRET_KEY) < 50 or SECRET_KEY.startswith('django-insecure-'):
+    raise ValueError('SECRET_KEY must be at least 50 characters long and not start with django-insecure-')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
 # Security settings
-ALLOWED_HOSTS = [
-    'animalshelter.com',
-    'www.animalshelter.com',
-    'staging.animalshelter.com',
-    'dev.animalshelter.com',
-    'qa.animalshelter.com',
-    'sit.animalshelter.com',
-]
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='.animalshelter.com,localhost,127.0.0.1').split(',')
+
+# Ensure we have at least one allowed host
+if not ALLOWED_HOSTS:
+    raise ValueError('DJANGO_ALLOWED_HOSTS must be set in production')
+
+# Security middleware settings
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# HSTS Settings
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)
+
+# Secure Cookies
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
+
+# Security Headers
+SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
+SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
+X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='DENY')
+SECURE_REFERRER_POLICY = config('SECURE_REFERRER_POLICY', default='same-origin')
+
+# Session settings
+SESSION_COOKIE_HTTPONLY = config('SESSION_COOKIE_HTTPONLY', default=True, cast=bool)
+CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=True, cast=bool)
 
 # Database configuration
 DATABASES = {
